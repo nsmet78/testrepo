@@ -1,0 +1,408 @@
+#####################################################
+openapi: "3.0.0"
+#####################################################
+# DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT
+#####################################################
+info:
+  title: Mapping Spooler API
+  description: Mapping Spooler API Spécifications
+  version: "0.0.0"
+  
+#####################################################
+servers:
+#####################################################
+  - url: "{protocol}://{server}:{port}/api/spooler/v1"
+    description: Local Server
+    variables:
+      protocol:
+        enum: 
+          - http
+          - https
+        default: https
+      server:
+        enum:
+          - '127.0.0.1'
+          - 'localhost'
+          - 'mappingsuite.com'
+        default: '127.0.0.1'
+      port:
+        enum:
+          - '80'
+          - '8002'
+          - '443'
+        default: '443'
+        
+#####################################################
+paths:
+#####################################################   
+
+#----------------------------------------------------
+  /:
+#----------------------------------------------------
+    get:
+      summary: Get information of the spooler
+      tags:
+        - spooler
+      responses:
+        '200':
+          description: Information of the spooler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/spooler'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/spooler'
+        default:
+          description: Unknow error code
+          
+#----------------------------------------------------          
+  /queues:
+#----------------------------------------------------
+    get:
+      summary: Get list of queues
+      tags:
+        - queues
+      parameters:
+        - name: site
+          in: query
+          required: false
+          description: filter on site name
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          description: filter by state
+          schema:
+            $ref: '#/components/schemas/queue_state'
+      responses:
+        '200':
+          description: List of queues
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/queue'
+            application/xml:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/queue'
+        default:
+          description: Unknow error code
+
+#----------------------------------------------------
+  /jobs:
+#----------------------------------------------------
+    get:
+      summary: Get list of jobs
+      tags:
+        - jobs
+      parameters:
+        - name: queue_name
+          in: query
+          required: false
+          description: filter on queue name
+          schema:
+            type: string
+        - name: job_state
+          in: query
+          required: false
+          description: filter by state
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/job'
+            application/xml:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/job'
+        default:
+          description: Unknow error code
+    post:
+      summary: Add a job in a queue
+      tags:
+        - job
+      parameters:
+        - name: queue
+          in: query
+          required: true
+          description: select queue in which the job will be created
+          schema:
+            type: string
+        - name: content
+          in: query
+          required: true
+          description: Content of the job (base 64)
+          schema:
+            type: string
+            format: byte
+      responses:
+        '200':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/job'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/job'
+        default:
+          description: Unknow error code
+    delete:
+      summary: Delete jobs
+      tags:
+        - jobs
+      parameters:
+        - name: queue
+          in: query
+          required: false
+          description: select queue from which the jobs will be deleted
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          description: state of jobs to delete
+          schema:
+            $ref: '#/components/schemas/job_state'
+      responses:
+        '200':
+          description: Deleted
+        default:
+          description: Unknow error code
+
+#----------------------------------------------------
+  /jobs/{job_id}:
+#----------------------------------------------------
+    get:
+      summary: Get information of a job
+      tags:
+        - job
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          description: job ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Information of the job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/job'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/job'
+        default:
+          description: Unknow error code
+
+
+#----------------------------------------------------
+  /jobs/{job_id}/content:
+#----------------------------------------------------
+    get:
+      summary: Get content of a job
+      tags:
+        - job
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          description: job ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Job content
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content: 
+                    type: string
+                    format: byte
+            application/*:
+              schema:
+                type: string
+                format: binary
+            text/plain:
+              schema:
+                type: string
+        default:
+          description: Unknow error code
+        
+          
+#####################################################           
+components:
+##################################################### 
+  schemas:
+
+#----------------------------------------------------
+    spooler:
+#----------------------------------------------------
+      type: object
+      properties:
+        state:
+          $ref: '#/components/schemas/spooler_state'
+        nb_held_jobs:
+          type: integer
+          example: 5
+        nb_ready_jobs:
+          type: integer
+          example: 10
+        nb_processing_jobs:
+          type: integer
+          example: 2
+        nb_error_jobs:
+          type: integer
+          example: 1
+        nb_saved_jobs:
+          type: integer
+          example: 132
+          
+#----------------------------------------------------
+    queue:
+#----------------------------------------------------
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        site:
+          type: string
+        state: 
+          $ref: '#/components/schemas/queue_state'
+        nb_held_jobs:
+          type: integer
+        nb_ready_jobs:
+          type: integer
+        nb_processing_jobs:
+          type: integer
+        nb_error_jobs: 
+          type: integer
+        nb_saved_jobs:
+          type: integer
+        jobs:
+          type: array
+          items:
+            $ref: '#/components/schemas/job'
+        devices:
+          type: array
+          items:
+            $ref: '#/components/schemas/device'
+
+#----------------------------------------------------
+    device:
+#----------------------------------------------------
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        state:
+          $ref: '#/components/schemas/device_state'
+        job:
+          $ref: '#/components/schemas/job'
+          
+#----------------------------------------------------
+    job:
+#----------------------------------------------------
+      type: object
+      properties:
+        id:
+          type: string
+          example: '000000000000135'
+        title:
+          type: string
+          example: 'My first invoice'
+        queue:
+          type: string
+          example: 'RICOH'
+        owner:
+          type: string
+          example: 'mapadmin'
+        date:
+          type: string
+          example: '2019-02-02'
+        keep:
+          type: boolean
+          example: true
+        metadatas:
+          type: array
+          items:
+            $ref: '#/components/schemas/metadata'
+          example: {param1: value1,param2: value2,param3: value3}
+        state:
+          $ref: '#/components/schemas/job_state'
+
+#----------------------------------------------------
+    metadata:
+#----------------------------------------------------
+      type: object
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+
+#----------------------------------------------------
+    spooler_state:
+#----------------------------------------------------
+      type: string
+      enum:
+        - UNINSTALLED
+        - INSTALLED
+        - STARTING
+        - ACTIVE
+        - STOPPING
+      example: ACTIVE
+        
+#----------------------------------------------------
+    queue_state:
+#----------------------------------------------------
+      type: string
+      enum:
+        - HELD
+        - READY
+      example: READY
+        
+#----------------------------------------------------
+    device_state:
+#----------------------------------------------------
+      type: string
+      enum:
+        - HELD
+        - READY
+        - ERROR
+
+#----------------------------------------------------
+    job_state:
+#----------------------------------------------------
+      type: string
+      enum: 
+        - HELD
+        - READY
+        - PROCESSING
+        - ERROR
+        - SAVED
+      example: READY
